@@ -16,6 +16,14 @@ public class Result {
     private String routeFilter;
     private String terminusFilter;
 
+    public Result(String loadingString) {
+        this.routeFilter = loadingString;
+    }
+
+    public Result(ArrayList<Stop> stops) {
+        this.stops = stops;
+    }
+
     public Result(JSONObject result) {
         this(result, null, null);
     }

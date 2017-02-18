@@ -7,5 +7,5 @@ package com.syzible.dublinnotifier.tools;
 public class Constants {
     public static final String ENDPOINT = "https://data.dublinked.ie/cgi-bin/rtpi/realtimebusinformation";
     public static final String CENTRAL_BANK_STOP = "1358";
-    public static final String OPPOSITE_CENTRAL_BANK_STOP = "7581";
+    public static final String LEESON_ST_JOHNS_AMBULANCE = "907";
 }

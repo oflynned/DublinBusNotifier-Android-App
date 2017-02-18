@@ -2,34 +2,38 @@ package com.syzible.dublinnotifier;
 
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
-import android.view.View;
-import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.TextView;
+import android.view.View;
 import android.widget.Toast;
 
 import com.syzible.dublinnotifier.networking.NetworkCallback;
 import com.syzible.dublinnotifier.networking.ReqJSONObject;
+import com.syzible.dublinnotifier.objects.Result;
 import com.syzible.dublinnotifier.objects.Stop;
 import com.syzible.dublinnotifier.tools.Constants;
-import com.syzible.dublinnotifier.objects.Result;
+import com.syzible.dublinnotifier.ui.CardAdapter;
+import com.syzible.dublinnotifier.ui.FilterDialog;
 
 import org.json.JSONObject;
 
-public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener, NetworkCallback<JSONObject> {
+import java.util.ArrayList;
 
-    private Result result;
-    private TextView textView;
-    private static final String ROUTE = "27";
-    private static final String DESTINATION = "Eden Quay";
+public class MainActivity extends AppCompatActivity
+        implements NetworkCallback<JSONObject> {
+
+    private static final String ROUTE = "79A";
+    private static final String DESTINATION = "Aston Quay";
+
+    private RecyclerView recyclerView;
+    private String stopId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,27 +42,45 @@ public class MainActivity extends AppCompatActivity
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        // TODO implement dialogue box here for notifications
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                final FilterDialog filterDialog = new FilterDialog();
+                filterDialog.setFilterListener(new FilterDialog.FilterListener() {
+                            @Override
+                            public void onFilter() {
+                                stopId = filterDialog.getStopId();
+                                loadData(stopId);
+                            }
+                        })
+                        .show(getSupportFragmentManager(), "Filter");
             }
         });
 
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawer.setDrawerListener(toggle);
-        toggle.syncState();
+        final SwipeRefreshLayout swipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh_layout);
+        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                loadData(stopId);
+                swipeRefreshLayout.setRefreshing(false);
+            }
+        });
 
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(this);
+        recyclerView = (RecyclerView) findViewById(R.id.result_holder);
+        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
+        recyclerView.setLayoutManager(layoutManager);
 
-        textView = (TextView) findViewById(R.id.information);
+        RecyclerView.Adapter adapter = new CardAdapter(new Result("Loading ..."));
+        recyclerView.setAdapter(adapter);
 
-        String url = Constants.ENDPOINT + "?stopid=" + Constants.CENTRAL_BANK_STOP + "&format=json";
+        stopId = Constants.CENTRAL_BANK_STOP;
+        loadData(stopId);
+    }
+
+    public void loadData(String stopid) {
+        String url = Constants.ENDPOINT + "?stopid=" + stopid + "&format=json";
         new ReqJSONObject(this, url).execute();
     }
 
@@ -94,62 +116,27 @@ public class MainActivity extends AppCompatActivity
         return super.onOptionsItemSelected(item);
     }
 
-    @SuppressWarnings("StatementWithEmptyBody")
-    @Override
-    public boolean onNavigationItemSelected(MenuItem item) {
-        // Handle navigation view item clicks here.
-        int id = item.getItemId();
-
-        if (id == R.id.nav_camera) {
-            // Handle the camera action
-        } else if (id == R.id.nav_gallery) {
-
-        } else if (id == R.id.nav_slideshow) {
-
-        } else if (id == R.id.nav_manage) {
-
-        } else if (id == R.id.nav_share) {
-
-        } else if (id == R.id.nav_send) {
-
-        }
-
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        drawer.closeDrawer(GravityCompat.START);
-        return true;
-    }
-
     @Override
     public void onSuccess(JSONObject object) {
-        //this.result = new Result(object);
-        //this.result = new Result(object, ROUTE);
-        result = new Result(object, ROUTE, DESTINATION);
-        String timeTo = "";
+        Result result = new Result(object);
+        RecyclerView.Adapter adapter = new CardAdapter(result);
+        recyclerView.setAdapter(adapter);
+    }
 
-        if(result.getStops().size() > 0) {
-            timeTo += result.getStops().size() + " buses for stop " + result.getStopId();
+    private static Result filterResults(Result result, String route, String terminus) {
+        ArrayList<Stop> filteredStops = new ArrayList<>();
 
+        if (result.getStops().size() > 0) {
             for (Stop stop : result.getStops()) {
-                System.out.println(stop.getDueTime() + " mins, " + stop.getRoute());
+                if (result.shouldFilterRoute() && stop.getRoute().equals(route))
+                        filteredStops.add(stop);
+
+                if (result.shouldFilterTerminus() && stop.getDestination().equals(terminus))
+                        filteredStops.add(stop);
             }
-
-            if (result.shouldFilterRoute())
-                timeTo += " / bus " + result.getRouteFilter();
-
-            if(result.shouldFilterTerminus())
-                timeTo += " / constrained terminus " + result.getTerminusFilter();
-
-            timeTo += " with the time to next being in " + result.getStops().get(0).getDueTime() +
-                    " min(s) towards " + result.getStops().get(0).getDestination() + "\n\n";
-
-            for (Stop stop : result.getStops())
-                timeTo += stop.getDueTime() + " mins / route " + stop.getRoute() + " / " + stop.getDestination() + "\n";
-        } else {
-            timeTo = "No buses forecast for this search. Perhaps change your constraints?";
         }
 
-
-        textView.setText(timeTo);
+        return new Result(filteredStops);
     }
 
     @Override
