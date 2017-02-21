@@ -3,23 +3,29 @@ package com.syzible.dublinnotifier.ui;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.text.InputType;
 import android.util.TypedValue;
-import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
+import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.syzible.dublinnotifier.fragments.MapsFragment;
 import com.syzible.dublinnotifier.R;
+import com.syzible.dublinnotifier.tools.Manager;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 
 
@@ -27,14 +33,17 @@ import java.util.Collections;
  * Created by ed on 18/02/2017.
  */
 
-public class FilterDialog extends android.support.v4.app.DialogFragment {
+public class FilterDialog extends android.support.v4.app.DialogFragment implements OnFilterSelection {
     //private ArrayList<String> stopIdValues = new ArrayList<>();
     //private ArrayList<String> routeValues = new ArrayList<>();
     //private ArrayList<String> terminusValues = new ArrayList<>();
 
+    private AlertDialog.Builder dialog;
+
     RelativeLayout stopIdLayout;
     TextView stopView;
-    Spinner stopSpinner;
+    EditText stopEditText;
+    ImageView mapsImageView;
 
     RelativeLayout routeLayout;
     TextView routeView;
@@ -53,6 +62,12 @@ public class FilterDialog extends android.support.v4.app.DialogFragment {
     CheckBox notifyCheckbox;
 
     private FilterListener filterListener;
+    private OnFilterSelection onFilterSelection;
+
+    @Override
+    public void onStopIdSelected(String stopId) {
+        stopEditText.setText(stopId);
+    }
 
     public interface FilterListener {
         void onFilter();
@@ -63,10 +78,68 @@ public class FilterDialog extends android.support.v4.app.DialogFragment {
         return this;
     }
 
+    @NonNull
+    @Override
+    public Dialog onCreateDialog(Bundle savedInstanceState) {
+        dialog = new AlertDialog.Builder(getActivity())
+                .setTitle("Filter")
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        if (filterListener != null)
+                            if (!getStopId().equals("-"))
+                                filterListener.onFilter();
+                            else
+                                Toast.makeText(getContext(), "Please input a stop ID", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null);
+
+        RelativeLayout outerRelativeLayout = new RelativeLayout(getContext());
+        RelativeLayout.LayoutParams outerParams = getMatchParentContent();
+        outerRelativeLayout.setLayoutParams(outerParams);
+
+        generateStopIdLayout();
+        generateRouteLayout();
+        generateTerminusLayout();
+        generateMinTimeLayout();
+        generateNotifyLayout();
+
+        // adding views to individual containers
+        stopIdLayout.addView(stopView);
+        stopIdLayout.addView(stopEditText);
+        stopIdLayout.addView(mapsImageView);
+
+        /*
+        routeLayout.addView(routeView);
+        routeLayout.addView(routeSpinner);
+
+        terminusLayout.addView(terminusView);
+        terminusLayout.addView(terminusSpinner);
+
+        minTimeLayout.addView(minTimeView);
+        minTimeLayout.addView(minTimeSpinner);
+
+        notifyLayout.addView(notifyView);
+        notifyLayout.addView(notifyCheckbox);*/
+
+        // adding containers to parent view
+        outerRelativeLayout.addView(stopIdLayout);
+
+        /*outerRelativeLayout.addView(routeLayout);
+        outerRelativeLayout.addView(terminusLayout);
+        outerRelativeLayout.addView(minTimeLayout);
+        outerRelativeLayout.addView(notifyLayout);*/
+
+        dialog.setView(outerRelativeLayout);
+
+        return dialog.create();
+    }
+
     private ArrayList<String> generateMinTimeValues() {
         ArrayList<String> minTimeValues = new ArrayList<>();
         minTimeValues.add(0, "-");
-        for (int i = 0; i < 50; i += 5)
+        for (int i = 0; i < 35; i += 5)
             minTimeValues.add(String.valueOf(i));
         return minTimeValues;
     }
@@ -101,18 +174,6 @@ public class FilterDialog extends android.support.v4.app.DialogFragment {
         return terminusValues;
     }
 
-    private ArrayList<String> generateStopIds() {
-        ArrayList<String> stopIdValues = new ArrayList<>();
-        stopIdValues.add("1358");
-        stopIdValues.add("907");
-
-        Collections.sort(stopIdValues);
-
-        stopIdValues.add(0, "-");
-
-        return stopIdValues;
-    }
-
     private void generateStopIdLayout() {
         // stop id filter - Required! Cannot poll otherwise
         stopIdLayout = new RelativeLayout(getContext());
@@ -129,16 +190,33 @@ public class FilterDialog extends android.support.v4.app.DialogFragment {
         stopView.setText("Stop ID");
         stopView.setId(View.generateViewId());
 
-        stopSpinner = new Spinner(getContext());
-        RelativeLayout.LayoutParams spinnerParams = getWrapContent();
-        spinnerParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
-        spinnerParams.addRule(RelativeLayout.CENTER_VERTICAL);
-        ArrayAdapter<String> stopAdapter = new ArrayAdapter<>(getContext(),
-                R.layout.filter_spinner, generateStopIds());
-        stopAdapter.setDropDownViewResource(R.layout.filter_spinner);
-        stopSpinner.setAdapter(stopAdapter);
-        stopSpinner.setLayoutParams(spinnerParams);
-        stopSpinner.setId(View.generateViewId());
+        Drawable dr = getResources().getDrawable(R.drawable.ic_place_black_48dp);
+        Bitmap bitmap = ((BitmapDrawable) dr).getBitmap();
+        Drawable drawable = new BitmapDrawable(getResources(),
+                Bitmap.createScaledBitmap(bitmap, getDp(32), getDp(32), true));
+
+        mapsImageView = new ImageView(getContext());
+        RelativeLayout.LayoutParams mapsImageViewParams = getWrapContent();
+        mapsImageViewParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
+        mapsImageViewParams.addRule(RelativeLayout.CENTER_VERTICAL);
+        mapsImageView.setLayoutParams(mapsImageViewParams);
+        mapsImageView.setImageDrawable(drawable);
+        mapsImageView.setId(View.generateViewId());
+        mapsImageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                MapsFragment mapsFragment = new MapsFragment();
+                Manager.getInstance().changeFragment(mapsFragment, getFragmentManager());
+            }
+        });
+
+        stopEditText = new EditText(getContext());
+        RelativeLayout.LayoutParams stopEditTextParams = getWrapContent();
+        stopEditTextParams.addRule(RelativeLayout.LEFT_OF, mapsImageView.getId());
+        stopEditText.setLayoutParams(stopEditTextParams);
+        stopEditText.setMinEms(4);
+        stopEditText.setRawInputType(InputType.TYPE_CLASS_NUMBER);
+        stopEditText.setId(View.generateViewId());
     }
 
     private void generateRouteLayout() {
@@ -197,7 +275,7 @@ public class FilterDialog extends android.support.v4.app.DialogFragment {
         terminusSpinner.setId(View.generateViewId());
     }
 
-    private void generateMinTimeLayout(){
+    private void generateMinTimeLayout() {
         // min time filter -- optional
         minTimeLayout = new RelativeLayout(getContext());
         RelativeLayout.LayoutParams minTimeLayoutParams = getWrapContent();
@@ -251,60 +329,6 @@ public class FilterDialog extends android.support.v4.app.DialogFragment {
         notifyCheckbox.setId(View.generateViewId());
     }
 
-    @NonNull
-    @Override
-    public Dialog onCreateDialog(Bundle savedInstanceState) {
-        AlertDialog.Builder dialog = new AlertDialog.Builder(getActivity())
-                .setTitle("Filter")
-                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        if (filterListener != null)
-                            if (!getStopId().equals("-"))
-                                filterListener.onFilter();
-                            else Toast.makeText(getContext(), "Please input a stop ID", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("Cancel", null);
-
-        RelativeLayout outerRelativeLayout = new RelativeLayout(getContext());
-        RelativeLayout.LayoutParams outerParams = getMatchParentContent();
-        outerRelativeLayout.setLayoutParams(outerParams);
-
-        generateStopIdLayout();
-        generateRouteLayout();
-        generateTerminusLayout();
-        generateMinTimeLayout();
-        generateNotifyLayout();
-
-        // adding views to individual containers
-        stopIdLayout.addView(stopView);
-        stopIdLayout.addView(stopSpinner);
-
-        routeLayout.addView(routeView);
-        routeLayout.addView(routeSpinner);
-
-        terminusLayout.addView(terminusView);
-        terminusLayout.addView(terminusSpinner);
-
-        minTimeLayout.addView(minTimeView);
-        minTimeLayout.addView(minTimeSpinner);
-
-        notifyLayout.addView(notifyView);
-        notifyLayout.addView(notifyCheckbox);
-
-        // adding containers to parent view
-        outerRelativeLayout.addView(stopIdLayout);
-        outerRelativeLayout.addView(routeLayout);
-        outerRelativeLayout.addView(terminusLayout);
-        outerRelativeLayout.addView(minTimeLayout);
-        outerRelativeLayout.addView(notifyLayout);
-
-        dialog.setView(outerRelativeLayout);
-
-        return dialog.create();
-    }
-
     public RelativeLayout.LayoutParams getWrapContent() {
         return new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -321,15 +345,15 @@ public class FilterDialog extends android.support.v4.app.DialogFragment {
     }
 
     public String getStopId() {
-        return stopSpinner.getSelectedItem().toString();
+        return stopEditText.toString().trim();
     }
 
     public String getRoute() {
-        return routeSpinner.getSelectedItem().toString();
+        return routeSpinner.getSelectedItem().toString().trim();
     }
 
     public String getTerminus() {
-        return terminusSpinner.getSelectedItem().toString();
+        return terminusSpinner.getSelectedItem().toString().trim();
     }
 
     public int getMinTime() {

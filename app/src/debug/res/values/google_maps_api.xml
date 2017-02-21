@@ -1,0 +1,21 @@
+<resources>
+    <!--
+    TODO: Before you run your application, you need a Google Maps API key.
+
+    To get one, follow this link, follow the directions and press "Create" at the end:
+
+    https://console.developers.google.com/flows/enableapi?apiid=maps_android_backend&keyType=CLIENT_SIDE_ANDROID&r=E7:8F:9E:74:F0:D2:21:8A:5C:CB:E9:D8:A1:E2:78:93:A1:33:43:3E%3Bcom.syzible.dublinnotifier
+
+    You can also add your credentials to an existing key, using this line:
+    E7:8F:9E:74:F0:D2:21:8A:5C:CB:E9:D8:A1:E2:78:93:A1:33:43:3E;com.syzible.dublinnotifier
+
+    Alternatively, follow the directions here:
+    https://developers.google.com/maps/documentation/android/start#get-key
+
+    Once you have your key (it starts with "AIza"), replace the "google_maps_key"
+    string in this file.
+    -->
+    <string name="google_maps_key" templateMergeStrategy="preserve" translatable="false">
+        AIzaSyDy23C3HO9FJeoEGA540OCBjmNR-7qYS5I
+    </string>
+</resources>
