@@ -14,11 +14,9 @@ import android.widget.Toast;
 
 import com.syzible.dublinnotifier.R;
 import com.syzible.dublinnotifier.networking.NetworkCallback;
-import com.syzible.dublinnotifier.networking.ReqJSONObject;
 import com.syzible.dublinnotifier.objects.Result;
-import com.syzible.dublinnotifier.tools.Constants;
+import com.syzible.dublinnotifier.tools.Manager;
 import com.syzible.dublinnotifier.ui.CardAdapter;
-import com.syzible.dublinnotifier.ui.FilterDialog;
 
 import org.json.JSONObject;
 
@@ -28,7 +26,12 @@ import org.json.JSONObject;
 
 public class CardsFragment extends Fragment implements NetworkCallback<JSONObject> {
     private RecyclerView recyclerView;
-    private String stopId;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        Manager.getInstance().loadData(this);
+    }
 
     @Nullable
     @Override
@@ -39,15 +42,7 @@ public class CardsFragment extends Fragment implements NetworkCallback<JSONObjec
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                final FilterDialog filterDialog = new FilterDialog();
-                filterDialog.setFilterListener(new FilterDialog.FilterListener() {
-                    @Override
-                    public void onFilter() {
-                        stopId = filterDialog.getStopId();
-                        loadData(stopId);
-                    }
-                })
-                        .show(getFragmentManager(), "Filter");
+                Manager.getInstance().createFilterDialog(getFragmentManager(), CardsFragment.this);
             }
         });
 
@@ -56,7 +51,7 @@ public class CardsFragment extends Fragment implements NetworkCallback<JSONObjec
         swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
-                loadData(stopId);
+                Manager.getInstance().loadData(CardsFragment.this);
                 swipeRefreshLayout.setRefreshing(false);
             }
         });
@@ -68,15 +63,7 @@ public class CardsFragment extends Fragment implements NetworkCallback<JSONObjec
         RecyclerView.Adapter adapter = new CardAdapter(new Result("Loading ..."));
         recyclerView.setAdapter(adapter);
 
-        stopId = "907";
-        loadData(stopId);
-
         return view;
-    }
-
-    public void loadData(String stopid) {
-        String url = Constants.ENDPOINT + "?stopid=" + stopid + "&format=json";
-        new ReqJSONObject(this, url).execute();
     }
 
     @Override

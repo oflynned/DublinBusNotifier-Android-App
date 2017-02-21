@@ -8,6 +8,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.v4.app.Fragment;
 import android.text.InputType;
 import android.util.TypedValue;
 import android.view.View;
@@ -33,7 +34,7 @@ import java.util.Collections;
  * Created by ed on 18/02/2017.
  */
 
-public class FilterDialog extends android.support.v4.app.DialogFragment implements OnFilterSelection {
+public class FilterDialog extends android.support.v4.app.DialogFragment {
     //private ArrayList<String> stopIdValues = new ArrayList<>();
     //private ArrayList<String> routeValues = new ArrayList<>();
     //private ArrayList<String> terminusValues = new ArrayList<>();
@@ -62,16 +63,6 @@ public class FilterDialog extends android.support.v4.app.DialogFragment implemen
     CheckBox notifyCheckbox;
 
     private FilterListener filterListener;
-    private OnFilterSelection onFilterSelection;
-
-    @Override
-    public void onStopIdSelected(String stopId) {
-        stopEditText.setText(stopId);
-    }
-
-    public interface FilterListener {
-        void onFilter();
-    }
 
     public FilterDialog setFilterListener(FilterListener filterListener) {
         this.filterListener = filterListener;
@@ -87,7 +78,7 @@ public class FilterDialog extends android.support.v4.app.DialogFragment implemen
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         if (filterListener != null)
-                            if (!getStopId().equals("-"))
+                            if (!getStopId().isEmpty())
                                 filterListener.onFilter();
                             else
                                 Toast.makeText(getContext(), "Please input a stop ID", Toast.LENGTH_SHORT).show();
@@ -205,6 +196,11 @@ public class FilterDialog extends android.support.v4.app.DialogFragment implemen
         mapsImageView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                // remove the dialog while the map is being shown
+                // replace later with data stored in prefs or manager instance
+                Fragment dialogFrag = getFragmentManager().findFragmentByTag("Filter");
+                getFragmentManager().beginTransaction().remove(dialogFrag).commit();
+
                 MapsFragment mapsFragment = new MapsFragment();
                 Manager.getInstance().changeFragment(mapsFragment, getFragmentManager());
             }
@@ -216,6 +212,7 @@ public class FilterDialog extends android.support.v4.app.DialogFragment implemen
         stopEditText.setLayoutParams(stopEditTextParams);
         stopEditText.setMinEms(4);
         stopEditText.setRawInputType(InputType.TYPE_CLASS_NUMBER);
+        stopEditText.setText(Manager.getInstance().getStopId());
         stopEditText.setId(View.generateViewId());
     }
 
@@ -345,7 +342,7 @@ public class FilterDialog extends android.support.v4.app.DialogFragment implemen
     }
 
     public String getStopId() {
-        return stopEditText.toString().trim();
+        return stopEditText.getText().toString().trim();
     }
 
     public String getRoute() {

@@ -12,6 +12,8 @@ public class MainActivity extends AppCompatActivity {
 
     // map
     // TODO poll curated list of data for spinners?
+    // TODO get location and show on map
+    // TODO zoom appropriately to 18.0f?
 
     // TODO notifications
     // TODO shared prefs keys for storing the last queried stop
@@ -29,10 +31,11 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        if(Manager.getInstance().getStage() == 1) {
-            this.finish();
-        } else {
+        if(Manager.getInstance().getStage() > 1) {
             Manager.getInstance().removeLastFragment(getSupportFragmentManager());
+        } else {
+            // first page or undefined -- therefore end activity
+            this.finish();
         }
     }
 
